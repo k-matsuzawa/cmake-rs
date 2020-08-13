@@ -53,6 +53,7 @@ use std::io::prelude::*;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::io::{self, Write};
 
 /// Builder style configuration for a pending CMake build.
 pub struct Config {
@@ -849,8 +850,8 @@ impl Config {
 
 fn run(cmd: &mut Command, program: &str) {
     println!("running: {:?}", cmd);
-    let status = match cmd.status() {
-        Ok(status) => status,
+    let output = match cmd.output() {
+        Ok(output) => output,
         Err(ref e) if e.kind() == ErrorKind::NotFound => {
             fail(&format!(
                 "failed to execute command: {}\nis `{}` not installed?",
@@ -859,10 +860,13 @@ fn run(cmd: &mut Command, program: &str) {
         }
         Err(e) => fail(&format!("failed to execute command: {}", e)),
     };
-    if !status.success() {
+    println!("status: {}", output.status);
+    io::stdout().write_all(&output.stdout).unwrap();
+    io::stderr().write_all(&output.stderr).unwrap();
+    if !output.status.success() {
         fail(&format!(
             "command did not execute successfully, got: {}",
-            status
+            output.status
         ));
     }
 }
